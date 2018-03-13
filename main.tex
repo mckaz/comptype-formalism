@@ -11,13 +11,16 @@
 \def\MK#1{\textcolor{blue}{\sf MK:$\clubsuit$ #1$\clubsuit$}}
 \def\emphbf#1{\textbf{\emph{#1}}}
 \newcommand{\judgementHead}[2]{\ensuremath{\emphbf{#1}\hfill\fbox{#2}}}
-\newcommand{\teval}[3]{\ensuremath{#1 \vdash #2:#3}}
+\newcommand{\teval}[4]{\ensuremath{#1 \vdash #2:#3\ \&\ #4}}
 \newcommand{\eeval}[2]{\ensuremath{#1 \rightsquigarrow #2}}
 \newcommand{\subst}[2]{\ensuremath{[ #1 \mapsto #2 ]}}
 \newcommand{\targ}{\texttt{targ}}
 \newcommand{\trec}{\texttt{trec}}
 \newcommand\trspace{\vspace{0.8em}}
 \newcommand{\subtype}[2]{\ensuremath{#1\leq #2}}
+\newcommand{\pure}{\texttt{PURE}}
+\newcommand{\impure}{\texttt{IMPURE}}
+\newcommand{\defof}[2]{\ensuremath{defOf(#1) = #2}}
 
 \makeatletter
 \newcommand\newsubcommand[3]{\newcommand#1{#2\sc@sub{#3}}}
@@ -55,11 +58,11 @@
 
 \MK{Do we want more kinds of types than just nominal types A? The interesting computations involve other types.}
 
-\MK{Is type table necessary, or can we just use gamma? If unnecessary, how to handle independent type annotations?}
-
 \MK{Is a self binding necessary within type computations? Both for evaluating and type checking it?}
 
 \MK{Can the TIf rule use unions of types if types are just defined as A/nil?}
+
+\MK{TAppBase rule: is this correct? Specifically type/effect checking of method body. Related: should effects be part of method annotation?}
 \begin{figure}[t!]
 \centering
 $$
@@ -72,7 +75,7 @@ $$
 
 \texttt{values} \quad
 & \val
-& ::= & \vnil \spmid \ell \spmid \basetype
+& ::= & \vnil \spmid \vinst{A} \spmid \basetype
 \\%[0.03in]
 
 \texttt{expressions} \quad
@@ -97,99 +100,119 @@ $$
 $$
 
   $x\in\textrm{var ids}$, $\efield\in\textrm{field ids}$, $m\in\textrm{meth ids}$, $A\in\textrm{class ids}$, and $\texttt{Type}\in A$
+  
+$$  
+\begin{array}{rrcl}
+\texttt{typ env} \quad
+& \Gamma
+& ::= & \textnormal{ids}\rightarrow \textnormal{types}
+\\
+\texttt{heap} \quad
+& \mathcal{H}
+& ::= & \textnormal{locs}\rightarrow\textnormal{obj. records}
+\\
+\texttt{effects}\quad
+& \varphi
+& ::= & \pure \spmid \impure
+\end{array}
+$$
 \end{figure}
 
 \begin{figure}
 \centering
-\judgementHead{Type checking rules}{\teval{\Gamma}{\expr}{\type}}
+\judgementHead{Type checking rules}{\teval{\Gamma}{\expr}{\type}{\varphi}}
 $$
-\inference{}{\teval{\Gamma}{\vnil}{\tnil}}[TNil]
+\inference{}{\teval{\Gamma}{\vnil}{\tnil}{\pure}}[TNil]
 \quad
-\inference{}{\teval{\Gamma}{\vinst{A}}{A}}[TObject]
+\inference{}{\teval{\Gamma}{\vinst{A}}{A}{\pure}}[TObject]
 \quad
-\inference{}{\teval{\Gamma}{\basetype}{\texttt{Type}}}[TType]
+\inference{}{\teval{\Gamma}{\basetype}{\texttt{Type}}{\pure}}[TType]
 $$
 \trspace
 $$
-\inference{}{\teval{\Gamma}{\var}{\Gamma(\var)}}[TVar]
+\inference{}{\teval{\Gamma}{\var}{\Gamma(\var)}{\pure}}[TVar]
 \quad
-\inference{}{\teval{\Gamma}{\eself}{\Gamma(\eself)}}[TSelf]
+\inference{}{\teval{\Gamma}{\eself}{\Gamma(\eself)}{\pure}}[TSelf]
 \quad
 \inference{\Gamma(\var) = \basetype_1 &&
-\teval{\Gamma}{\expr}{\basetype_2} \\
+\teval{\Gamma}{\expr}{\basetype_2}{\varphi} \\
 \subtype{\basetype_2}{\basetype_1}}
-{\teval{\Gamma}{\eassn{\var}{\expr}}{\Gamma'\subst{\var}{\basetype}}{\basetype}}[TAssn]
+{\teval{\Gamma}{\eassn{\var}{\expr}}{\basetype_2}{\varphi}}[TAssn]
 $$
 \trspace
 $$
-\inference{\teval{\Gamma}{\expr_1}{\basetype_1} \\
-\teval{\Gamma_1}{\expr_2}{\basetype_2}}
-{\teval{\Gamma}{\eseq{\expr_1}{\expr_2}}{\basetype_2}}[TSeq]
+\inference{\teval{\Gamma}{\expr_1}{\basetype_1}{\varphi_1} \\
+\teval{\Gamma_1}{\expr_2}{\basetype_2}{\varphi_2}}
+{\teval{\Gamma}{\eseq{\expr_1}{\expr_2}}{\basetype_2}{(\varphi_1\sqcup\varphi_2)}}[TSeq]
 \quad
-\inference{}{\teval{\Gamma}{\enew{A}}{A}}[TNew]
+\inference{}{\teval{\Gamma}{\enew{A}}{A}{\pure}}[TNew]
 $$
 \trspace
 $$
-\inference{\teval{\Gamma}{\expr_1}{\basetype_1} &&
-\teval{\Gamma}{\expr_2}{\basetype_2} \\
-\teval{\Gamma}{\expr_3}{\basetype_3}}
-{\teval{\Gamma}{\eif{\expr_1}{\expr_2}{\expr_3}}{\basetype_2\sqcup\basetype_3}}[TIf]
+\inference{\teval{\Gamma}{\expr_1}{\basetype_1}{\varphi_1} &&
+\teval{\Gamma}{\expr_2}{\basetype_2}{\varphi_2} \\
+\teval{\Gamma}{\expr_3}{\basetype_3}{\varphi_3}}
+{\teval{\Gamma}{\eif{\expr_1}{\expr_2}{\expr_3}}{(\basetype_2\sqcup\basetype_3)}{(\varphi_1\sqcup\varphi_2\sqcup\varphi_3)}}[TIf]
 $$
 \trspace
 $$
 \inference{\Gamma(self) = A && \Gamma(A.\efield) = \basetype \\
-\teval{\Gamma}{\expr}{\basetype_1} && \subtype{\basetype_1}{\basetype}}
-{\teval{\Gamma}{\eassn{\efield}{\expr}}{\basetype_1}}[TFAssn]
+\teval{\Gamma}{\expr}{\basetype_1}{\varphi} && \subtype{\basetype_1}{\basetype}}
+{\teval{\Gamma}{\eassn{\efield}{\expr}}{\basetype_1}{\impure}}[TFAssn]
 \quad
 \inference{\Gamma(self) = A}
-{\teval{\Gamma}{\efield}{\Gamma(A.\efield)}}[TFVar]
+{\teval{\Gamma}{\efield}{\Gamma(A.\efield)}{\textit{I think impure?}}}[TFVar]
 $$
 \trspace
 $$
-\inference{\teval{\Gamma}{\expr_0}{A} &&
-\teval{\Gamma}{\expr_1}{\basetype} \\
+\inference{\teval{\Gamma}{\expr_0}{A}{\varphi_{1}} &&
+\teval{\Gamma}{\expr_1}{\basetype}{\varphi_{2}} \\
 \Gamma(A.m) = \mthtype{\basetype_1}{\basetype_2} &&
-\subtype{\basetype}{\basetype_1}
+\subtype{\basetype}{\basetype_1} \\
+\defof{A.m}{\expr_{m}} && \teval{\Gamma}{\expr_{m}}{\type}{\varphi_{3}}
 }
-{\teval{\Gamma}{\emethcall{\expr_0}{m}{\expr_1}}{\basetype_2}}[TAppBase] 
+{\teval{\Gamma}{\emethcall{\expr_0}{m}{\expr_1}}{\basetype_2}{\varphi_{1}\sqcup\varphi_{2}\sqcup\varphi_{3}}}[TAppBase] 
 $$
 \trspace
 $$
-\inference{\teval{\Gamma}{\expr_0}{A} &&
-\teval{\Gamma}{\expr_1}{\basetype} \\
+\inference{\teval{\Gamma}{\expr_0}{A}{\varphi_{1}} &&
+\teval{\Gamma}{\expr_1}{\basetype}{\varphi_{2}} \\
 \Gamma(A.m) = \mthtype{\deptype_{t1}}{\deptype_{t2}} \\
-\teval{\Gamma}{\expr_{t1}\subst{\var}{\basetype}}{\texttt{Type}} &&
-\teval{\Gamma}{\expr_{t2}\subst{\var}{\basetype}}{\texttt{Type}}\\
+\teval{\Gamma}{\expr_{t1}\subst{\var}{\basetype}}{\texttt{Type}}{\pure} &&
+\teval{\Gamma}{\expr_{t2}\subst{\var}{\basetype}}{\texttt{Type}}{\pure}\\
 \eeval{\expr_{t1}\subst{\var}{\basetype}}{\basetype_1} &&
 \eeval{\expr_{t2}\subst{\var}{\basetype}}{\basetype_2} \\
-\subtype{\basetype}{\basetype_1} \\
-\textnormal{no effects and type checking above terminates}
+\subtype{\basetype}{\basetype_1} &&
+\defof{A.m}{\expr_{m}} && \teval{\Gamma}{\expr_{m}}{\type}{\varphi_{3}}\\
+\textnormal{type checking above terminates}
 }
-{\teval{\Gamma}{\emethcall{\expr_0}{m}{\expr_1}}{\basetype_2}}[TAppComp]
+{\teval{\Gamma}{\emethcall{\expr_0}{m}{\expr_1}}{\basetype_2}{\varphi_{1}\sqcup\varphi_{2}\sqcup\varphi_{3}}}[TAppComp]
 $$
 \trspace
 $$
-\inference{\teval{\Gamma}{\expr_0}{A} &&
-\teval{\Gamma}{\expr_1}{\basetype} \\
+\inference{\teval{\Gamma}{\expr_0}{A}{\varphi_{1}} &&
+\teval{\Gamma}{\expr_1}{\basetype}{\varphi_{2}} \\
 \Gamma(A.m) = \mthtype{\deptype_{t1}}{\basetype_2} &&
-\teval{\Gamma}{\expr_{t1}\subst{\var}{\basetype}}{\texttt{Type}} \\
+\teval{\Gamma}{\expr_{t1}\subst{\var}{\basetype}}{\texttt{Type}}{\pure} \\
 \eeval{\expr_{t1}\subst{\var}{\basetype}}{\basetype_1} &&
 \subtype{\basetype}{\basetype_1} \\
-\textnormal{no effects and type checking above terminates}
+\defof{A.m}{\expr_{m}} && \teval{\Gamma}{\expr_{m}}{\type}{\varphi_{3}} \\ 
+\textnormal{type checking above terminates}
 }
-{\teval{\Gamma}{\emethcall{\expr_0}{m}{\expr_1}}{\basetype_2}}[TAppArg]
+{\teval{\Gamma}{\emethcall{\expr_0}{m}{\expr_1}}{\basetype_2}{\varphi_{1}\sqcup\varphi_{2}\sqcup\varphi_{3}}}[TAppArg]
 $$
 \trspace
 $$
-\inference{\teval{\Gamma}{\expr_0}{A} &&
-\teval{\Gamma}{\expr_1}{\basetype} \\
+\inference{\teval{\Gamma}{\expr_0}{A}{\varphi_{1}} &&
+\teval{\Gamma}{\expr_1}{\basetype}{\varphi_{2}} \\
 \Gamma(A.m) = \mthtype{\basetype_1}{\deptype_{t2}} &&
 \subtype{\basetype}{\basetype_1} \\
-\teval{\Gamma}{\expr_{t2}\subst{\var}{\basetype}}{\texttt{Type}} &&
+\teval{\Gamma}{\expr_{t2}\subst{\var}{\basetype}}{\texttt{Type}}{\pure} &&
 \eeval{\expr_{t2}\subst{\var}{\basetype}}{\basetype_2} \\
-\textnormal{no effects and type checking above terminates}
+\defof{A.m}{\expr_{m}} && \teval{\Gamma}{\expr_{m}}{\type}{\varphi_{3}} \\ 
+\textnormal{type checking above terminates}
 }
-{\teval{\Gamma}{\emethcall{\expr_0}{m}{\expr_1}}{\basetype_2}}[TAppRet]
+{\teval{\Gamma}{\emethcall{\expr_0}{m}{\expr_1}}{\basetype_2}{\varphi_{1}\sqcup\varphi_{2}\sqcup\varphi_{3}}}[TAppRet]
 $$
 
 
