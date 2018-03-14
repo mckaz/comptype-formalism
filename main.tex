@@ -51,7 +51,7 @@
 \newcommand\efield{\ensuremath{f}\xspace}
 \newcommand\efieldassn[1]{\ensuremath{\efield = #1}\xspace}
 \newcommand\enew[1]{\ensuremath{#1 . \texttt{new}}\xspace}
-\newcommand\mthtype[2]{\ensuremath{#1 \rightarrow #2}\xspace}
+\newcommand\mthtype[3]{\ensuremath{#1 \rightarrow #2 :: #3}\xspace}
 
 \begin{document}
 \MK{Should types be their own kind of value? Or are they also just instances of a class A?}
@@ -95,7 +95,7 @@ $$
 
 \texttt{mth types} \quad
 & \methtype
-& ::= & \mthtype{\tau}{\tau}
+& ::= & \mthtype{\tau}{\tau}{\varphi}
 \end{array}
 $$
 
@@ -167,9 +167,8 @@ $$
 $$
 \inference{\teval{\Gamma}{\expr_0}{A}{\varphi_{1}} &&
 \teval{\Gamma}{\expr_1}{\basetype}{\varphi_{2}} \\
-\Gamma(A.m) = \mthtype{\basetype_1}{\basetype_2} &&
+\Gamma(A.m) = \mthtype{\basetype_1}{\basetype_2}{\varphi_{3}} &&
 \subtype{\basetype}{\basetype_1} \\
-\defof{A.m}{\expr_{m}} && \teval{\Gamma}{\expr_{m}}{\type}{\varphi_{3}}
 }
 {\teval{\Gamma}{\emethcall{\expr_0}{m}{\expr_1}}{\basetype_2}{\varphi_{1}\sqcup\varphi_{2}\sqcup\varphi_{3}}}[TAppBase] 
 $$
@@ -177,13 +176,12 @@ $$
 $$
 \inference{\teval{\Gamma}{\expr_0}{A}{\varphi_{1}} &&
 \teval{\Gamma}{\expr_1}{\basetype}{\varphi_{2}} \\
-\Gamma(A.m) = \mthtype{\deptype_{t1}}{\deptype_{t2}} \\
+\Gamma(A.m) = \mthtype{\deptype_{t1}}{\deptype_{t2}}{\varphi_{3}} \\
 \teval{\Gamma}{\expr_{t1}\subst{\var}{\basetype}}{\texttt{Type}}{\pure} &&
 \teval{\Gamma}{\expr_{t2}\subst{\var}{\basetype}}{\texttt{Type}}{\pure}\\
 \eeval{\expr_{t1}\subst{\var}{\basetype}}{\basetype_1} &&
-\eeval{\expr_{t2}\subst{\var}{\basetype}}{\basetype_2} \\
-\subtype{\basetype}{\basetype_1} &&
-\defof{A.m}{\expr_{m}} && \teval{\Gamma}{\expr_{m}}{\type}{\varphi_{3}}\\
+\eeval{\expr_{t2}\subst{\var}{\basetype}}{\basetype_2} &&
+\subtype{\basetype}{\basetype_1} \\
 \textnormal{type checking above terminates}
 }
 {\teval{\Gamma}{\emethcall{\expr_0}{m}{\expr_1}}{\basetype_2}{\varphi_{1}\sqcup\varphi_{2}\sqcup\varphi_{3}}}[TAppComp]
@@ -192,11 +190,10 @@ $$
 $$
 \inference{\teval{\Gamma}{\expr_0}{A}{\varphi_{1}} &&
 \teval{\Gamma}{\expr_1}{\basetype}{\varphi_{2}} \\
-\Gamma(A.m) = \mthtype{\deptype_{t1}}{\basetype_2} &&
+\Gamma(A.m) = \mthtype{\deptype_{t1}}{\basetype_2}{\varphi_{3}} &&
 \teval{\Gamma}{\expr_{t1}\subst{\var}{\basetype}}{\texttt{Type}}{\pure} \\
 \eeval{\expr_{t1}\subst{\var}{\basetype}}{\basetype_1} &&
 \subtype{\basetype}{\basetype_1} \\
-\defof{A.m}{\expr_{m}} && \teval{\Gamma}{\expr_{m}}{\type}{\varphi_{3}} \\ 
 \textnormal{type checking above terminates}
 }
 {\teval{\Gamma}{\emethcall{\expr_0}{m}{\expr_1}}{\basetype_2}{\varphi_{1}\sqcup\varphi_{2}\sqcup\varphi_{3}}}[TAppArg]
@@ -205,11 +202,10 @@ $$
 $$
 \inference{\teval{\Gamma}{\expr_0}{A}{\varphi_{1}} &&
 \teval{\Gamma}{\expr_1}{\basetype}{\varphi_{2}} \\
-\Gamma(A.m) = \mthtype{\basetype_1}{\deptype_{t2}} &&
+\Gamma(A.m) = \mthtype{\basetype_1}{\deptype_{t2}}{\varphi_{3}} &&
 \subtype{\basetype}{\basetype_1} \\
 \teval{\Gamma}{\expr_{t2}\subst{\var}{\basetype}}{\texttt{Type}}{\pure} &&
 \eeval{\expr_{t2}\subst{\var}{\basetype}}{\basetype_2} \\
-\defof{A.m}{\expr_{m}} && \teval{\Gamma}{\expr_{m}}{\type}{\varphi_{3}} \\ 
 \textnormal{type checking above terminates}
 }
 {\teval{\Gamma}{\emethcall{\expr_0}{m}{\expr_1}}{\basetype_2}{\varphi_{1}\sqcup\varphi_{2}\sqcup\varphi_{3}}}[TAppRet]
